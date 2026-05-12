@@ -1,9 +1,9 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, Link } from "react-router-dom";
+import api from "../api/axios";
 import { ProfileSkeleton } from "../components/Skeletons";
 import { ProfileEmptyLogs } from "../components/EmptyState";
 import { useErrorBanner } from "../components/ErrorBanner";
-import api from "../api/axios";
 
 function formatMemberSince(dateStr) {
   if (!dateStr) return "";
@@ -73,7 +73,10 @@ function ContributionHeatmap({ logs }) {
   let lastMonth = -1;
   weeks.forEach((week, wi) => {
     const m = week[0].getMonth();
-    if (m !== lastMonth) { monthLabels.push({ wi, label: week[0].toLocaleString("default", { month: "short" }) }); lastMonth = m; }
+    if (m !== lastMonth) {
+      monthLabels.push({ wi, label: week[0].toLocaleString("default", { month: "short" }) });
+      lastMonth = m;
+    }
   });
 
   const svgW = LEFT_PAD + weeks.length * (CELL + GAP);
@@ -96,10 +99,12 @@ function ContributionHeatmap({ logs }) {
       <div style={{ overflowX: "auto", paddingBottom: 4 }}>
         <svg width={svgW} height={svgH} style={{ display: "block", overflow: "visible" }}>
           {monthLabels.map(({ wi, label }) => (
-            <text key={wi} x={LEFT_PAD + wi*(CELL+GAP)} y={TOP_PAD-8} fill="#6b7280" fontSize="10" fontFamily="'JetBrains Mono',monospace">{label}</text>
+            <text key={wi} x={LEFT_PAD + wi*(CELL+GAP)} y={TOP_PAD-8}
+              fill="#6b7280" fontSize="10" fontFamily="'JetBrains Mono',monospace">{label}</text>
           ))}
           {DAY_LABELS.map((label, di) => label ? (
-            <text key={di} x={LEFT_PAD-5} y={TOP_PAD+di*(CELL+GAP)+CELL-1} fill="#6b7280" fontSize="9" fontFamily="'JetBrains Mono',monospace" textAnchor="end">{label}</text>
+            <text key={di} x={LEFT_PAD-5} y={TOP_PAD+di*(CELL+GAP)+CELL-1}
+              fill="#6b7280" fontSize="9" fontFamily="'JetBrains Mono',monospace" textAnchor="end">{label}</text>
           ) : null)}
           {weeks.map((week, wi) => week.map((day, di) => {
             if (day > today) return null;
@@ -176,6 +181,7 @@ export default function PublicProfile() {
   const [selectedTag, setSelectedTag] = useState(null);
   const { ErrorBanner, showError }    = useErrorBanner();
 
+  // SEO
   useEffect(() => {
     if (!username) return;
     document.title = `${username}'s DevLog | DevLog`;
@@ -185,6 +191,7 @@ export default function PublicProfile() {
     return () => { document.title = "DevLog"; };
   }, [username]);
 
+  // Data fetch
   useEffect(() => {
     const load = async () => {
       try {
@@ -193,17 +200,12 @@ export default function PublicProfile() {
           api.get(`/api/users/${username}`),
           api.get(`/api/logs/user/${username}`),
         ]);
-        if (!pRes.ok) {
-          const data = await pRes.json().catch(() => ({}));
-          throw new Error(data.message || data.error || "User not found");
-        }
-        const [pData, lData] = await Promise.all([pRes.data, lRes.data]);
-setProfile(pData);
-setLogs(Array.isArray(lData) ? lData : lData.logs || []);
-
+        setProfile(pRes.data);
+        setLogs(Array.isArray(lRes.data) ? lRes.data : lRes.data.logs || []);
       } catch (err) {
-        setError(err.message);
-        showError(err.message);
+        const msg = err.response?.data?.message || "User not found";
+        setError(msg);
+        showError(msg);
       } finally {
         setLoading(false);
       }
@@ -231,11 +233,16 @@ setLogs(Array.isArray(lData) ? lData : lData.logs || []);
       <ErrorBanner />
       <style>{STYLES}</style>
       <div className="pp">
+
+        {/* ── Nav ── */}
         <div className="pp-nav">
-          <Link to="/" className="pp-logo"><span className="pp-logo-dev">DEV</span><span className="pp-logo-log">LOG</span></Link>
+          <Link to="/" className="pp-logo">
+            <span className="pp-logo-dev">DEV</span><span className="pp-logo-log">LOG</span>
+          </Link>
           <span className="pp-nav-label">Public Profile</span>
         </div>
 
+        {/* ── Header ── */}
         <header className="pp-header">
           <div className="pp-header-inner">
             <div className="pp-avatar">{username?.[0]?.toUpperCase()}</div>
@@ -261,7 +268,10 @@ setLogs(Array.isArray(lData) ? lData : lData.logs || []);
           </div>
         </header>
 
+        {/* ── Body ── */}
         <div className="pp-body">
+
+          {/* Heatmap */}
           <section className="pp-section">
             <div className="pp-section-header">
               <div className="pp-section-dot" />
@@ -270,6 +280,7 @@ setLogs(Array.isArray(lData) ? lData : lData.logs || []);
             <div className="pp-card"><ContributionHeatmap logs={logs} /></div>
           </section>
 
+          {/* Logs */}
           <section className="pp-section">
             <div className="pp-section-header">
               <div className="pp-section-dot" />
@@ -299,6 +310,8 @@ setLogs(Array.isArray(lData) ? lData : lData.logs || []);
     </>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Syne:wght@400;600;800&display=swap');
