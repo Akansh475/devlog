@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { ProfileSkeleton } from "../components/Skeletons";
 import { ProfileEmptyLogs } from "../components/EmptyState";
 import { useErrorBanner } from "../components/ErrorBanner";
+import api from "../api/axios";
 
 function formatMemberSince(dateStr) {
   if (!dateStr) return "";
@@ -189,16 +190,17 @@ export default function PublicProfile() {
       try {
         setLoading(true);
         const [pRes, lRes] = await Promise.all([
-          fetch(`/api/users/${username}`),
-          fetch(`/api/logs/user/${username}`),
+          api.get(`/api/users/${username}`),
+          api.get(`/api/logs/user/${username}`),
         ]);
         if (!pRes.ok) {
           const data = await pRes.json().catch(() => ({}));
           throw new Error(data.message || data.error || "User not found");
         }
-        const [pData, lData] = await Promise.all([pRes.json(), lRes.json()]);
-        setProfile(pData);
-        setLogs(Array.isArray(lData) ? lData : lData.logs || []);
+        const [pData, lData] = await Promise.all([pRes.data, lRes.data]);
+setProfile(pData);
+setLogs(Array.isArray(lData) ? lData : lData.logs || []);
+
       } catch (err) {
         setError(err.message);
         showError(err.message);
